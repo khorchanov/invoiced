@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Environment / secrets (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
+# Node / React
+node_modules/
+frontend/dist/
+.vite/
+*.log
+npm-debug.log*
+
+# Docker volumes / local data
+pgdata/
+redisdata/
+uploads/
+
+# IDEs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
