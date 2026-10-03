@@ -8,6 +8,7 @@ class Settings(BaseSettings):
 
     app_name: str = "ai-native"
     environment: str = "dev"
+    database_url: str = "postgresql+asyncpg://ainative:ainative@localhost:5432/ainative"
 
 
 @lru_cache

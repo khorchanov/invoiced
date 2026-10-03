@@ -1,7 +1,13 @@
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.database import get_db
 
 settings = get_settings()
 
@@ -11,8 +17,13 @@ app = FastAPI(title=settings.app_name)
 class HealthResponse(BaseModel):
     status: str
     environment: str
+    database: str
 
 
 @app.get("/health", response_model=HealthResponse)
-def health() -> HealthResponse:
-    return HealthResponse(status="ok", environment=settings.environment)
+async def health(db: Annotated[AsyncSession, Depends(get_db)]) -> HealthResponse:
+    try:
+        await db.execute(text("SELECT 1"))
+    except (SQLAlchemyError, OSError):
+        raise HTTPException(status_code=503, detail="database unavailable")
+    return HealthResponse(status="ok", environment=settings.environment, database="ok")
