@@ -8,10 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.routers import auth, users
 
 settings = get_settings()
 
 app = FastAPI(title=settings.app_name)
+app.include_router(auth.router)
+app.include_router(users.router)
 
 
 class HealthResponse(BaseModel):
