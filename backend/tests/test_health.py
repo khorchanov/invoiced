@@ -22,11 +22,12 @@ async def test_health_returns_503_when_database_unreachable(client: AsyncClient)
     async def broken_get_db() -> AsyncIterator[UnreachableSession]:
         yield UnreachableSession()
 
+    previous = app.dependency_overrides[get_db]
     app.dependency_overrides[get_db] = broken_get_db
     try:
         response = await client.get("/health")
     finally:
-        app.dependency_overrides.clear()
+        app.dependency_overrides[get_db] = previous
 
     assert response.status_code == 503
     assert response.json() == {"detail": "database unavailable"}
