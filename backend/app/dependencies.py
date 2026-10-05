@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 from typing import Annotated
 
 import jwt
@@ -6,11 +7,14 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
+from app.repositories.document import DocumentRepository
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
+from app.services.document import DocumentService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -45,3 +49,14 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], users:
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_document_repository(db: DbSession) -> DocumentRepository:
+    return DocumentRepository(db)
+
+
+def get_document_service(
+    documents: Annotated[DocumentRepository, Depends(get_document_repository)],
+) -> DocumentService:
+    settings = get_settings()
+    return DocumentService(documents, Path(settings.upload_dir), settings.max_upload_bytes)

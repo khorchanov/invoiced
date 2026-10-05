@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -51,3 +51,16 @@ async def client(test_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
     async with test_engine.begin() as conn:
         await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+
+
+@pytest_asyncio.fixture
+async def make_auth_headers(client: AsyncClient) -> Callable[[str], Awaitable[dict[str, str]]]:
+    async def _make(email: str) -> dict[str, str]:
+        credentials = {"email": email, "password": "correct-horse-battery"}
+        await client.post("/auth/register", json=credentials)
+        response = await client.post(
+            "/auth/login", data={"username": email, "password": credentials["password"]}
+        )
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    return _make

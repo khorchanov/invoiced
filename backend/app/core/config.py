@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     secret_key: str = "dev-only-secret-change-me-in-production-0123456789"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+    upload_dir: str = "uploads"
+    max_upload_bytes: int = 10 * 1024 * 1024
 
 
 @lru_cache
