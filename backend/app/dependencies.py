@@ -7,6 +7,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from langchain_core.language_models import BaseChatModel
+
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import decode_access_token
@@ -15,6 +17,7 @@ from app.repositories.chunk import ChunkRepository
 from app.repositories.document import DocumentRepository
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
+from app.services.agent import AgentService, get_chat_model
 from app.services.document import DocumentService
 from app.services.embedding import Embedder, get_embedder
 from app.services.search import SearchService
@@ -72,3 +75,16 @@ def get_search_service(
     db: DbSession, embedder: Annotated[Embedder, Depends(get_embedder)]
 ) -> SearchService:
     return SearchService(ChunkRepository(db), embedder)
+
+
+def get_agent_service(
+    db: DbSession,
+    embedder: Annotated[Embedder, Depends(get_embedder)],
+    model: Annotated[BaseChatModel, Depends(get_chat_model)],
+) -> AgentService:
+    return AgentService(
+        model,
+        SearchService(ChunkRepository(db), embedder),
+        DocumentRepository(db),
+        ChunkRepository(db),
+    )

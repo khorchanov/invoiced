@@ -54,6 +54,17 @@ class ChunkRepository:
         )
         return list(result.scalars())
 
+    async def first_for_document(
+        self, document_id: uuid.UUID, owner_id: uuid.UUID, limit: int
+    ) -> list[Chunk]:
+        result = await self.session.execute(
+            select(Chunk)
+            .where(Chunk.document_id == document_id, Chunk.owner_id == owner_id)
+            .order_by(Chunk.position)
+            .limit(limit)
+        )
+        return list(result.scalars())
+
     async def search(
         self, owner_id: uuid.UUID, query_embedding: list[float], limit: int
     ) -> list[SearchHit]:

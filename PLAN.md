@@ -72,7 +72,9 @@ docker compose down -v            # stop and wipe data
 
 ### Milestone 4: retrieval and agent
 - [x] pgvector search filtered by user: `ChunkRepository.search`, `POST /search`, isolation test
-- [ ] LangChain agent (tools: `search_documents`, `list_documents`, `get_document_summary`), non-streaming
+- [x] LangChain agent (tools: `search_documents`, `list_documents`, `get_document_summary`), non-streaming: `POST /chat`, `services/agent.py`, chat model `qwen2.5:7b` (`CHAT_MODEL`); tools are bound to the user id
+- [ ] Verify `/chat` against a real model (`ollama pull qwen2.5:7b`); tool calling quality varies by model
+- [ ] Known limit: `get_document_summary` returns the opening chunks for the model to summarize (no stored summary)
 - [ ] LLM/embedding provider switch (Ollama / hosted); embeddings are Ollama-only for now, and the column is fixed at 768 dims
 
 ### Milestone 5: streaming and observability
