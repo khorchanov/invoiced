@@ -65,8 +65,9 @@ docker compose down -v            # stop and wipe data
 ### Milestone 3: documents and Celery (in progress)
 - [x] `documents` table, upload endpoint + status, Celery app and idempotent `process_document` task
 - [x] `services/extraction.py` (PDF/text) and `services/chunking.py`, unit tested
-- [ ] Migration: `CREATE EXTENSION vector`, `chunks` table (owner_id + document_id, embedding model per chunk)
-- [ ] Wire extract -> chunk -> store into `_extract_and_index` (needs Docker for DB tests), then embed
+- [x] Migration: `CREATE EXTENSION vector`, `chunks` table (owner_id + document_id, no embedding column yet)
+- [x] `_extract_and_index` extracts, chunks and stores chunks
+- [ ] Embed chunks: add `embedding` + `embedding_model` columns (needs the provider decision: Ollama or hosted)
 
 ### Milestone 4: retrieval and agent
 - [ ] pgvector search filtered by user

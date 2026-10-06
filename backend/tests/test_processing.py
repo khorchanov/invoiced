@@ -2,10 +2,13 @@ import uuid
 
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from pathlib import Path
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.models.document import Document, DocumentStatus
 from app.models.user import User
+from app.core.config import get_settings
+from app.repositories.chunk import ChunkRepository
 from app.repositories.document import DocumentRepository
 from app.services import processing
 from app.services.processing import process_document
@@ -15,6 +18,14 @@ from app.services.processing import process_document
 def session_factory(test_engine: AsyncEngine, client: AsyncClient) -> async_sessionmaker:
     # `client` is requested only so tables are truncated after each test.
     return async_sessionmaker(test_engine, expire_on_commit=False)
+
+
+@pytest.fixture
+def upload_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    get_settings.cache_clear()
+    yield tmp_path
+    get_settings.cache_clear()
 
 
 async def make_document(
@@ -44,18 +55,35 @@ async def fetch(session_factory: async_sessionmaker, document_id: uuid.UUID) -> 
         return document
 
 
-async def test_processing_marks_document_ready(session_factory: async_sessionmaker) -> None:
+async def test_processing_stores_chunks_and_marks_ready(
+    session_factory: async_sessionmaker, upload_dir: Path
+) -> None:
+    (upload_dir / "x").mkdir()
+    (upload_dir / "x" / "y.txt").write_text("hello world", encoding="utf-8")
     document_id = await make_document(session_factory)
 
     await process_document(document_id, session_factory)
 
     assert (await fetch(session_factory, document_id)).status == DocumentStatus.READY
+    async with session_factory() as session:
+        chunks = await ChunkRepository(session).list_for_document(document_id)
+    assert [c.content for c in chunks] == ["hello world"]
+
+
+async def test_processing_missing_file_marks_document_failed(
+    session_factory: async_sessionmaker, upload_dir: Path
+) -> None:
+    document_id = await make_document(session_factory)
+
+    await process_document(document_id, session_factory)
+
+    assert (await fetch(session_factory, document_id)).status == DocumentStatus.FAILED
 
 
 async def test_processing_failure_marks_document_failed(
     session_factory: async_sessionmaker, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def boom(document: Document) -> None:
+    async def boom(document: Document, session: AsyncSession) -> None:
         raise RuntimeError("cannot parse")
 
     monkeypatch.setattr(processing, "_extract_and_index", boom)
@@ -73,7 +101,7 @@ async def test_processing_skips_non_pending_document(
 ) -> None:
     calls: list[Document] = []
 
-    async def record(document: Document) -> None:
+    async def record(document: Document, session: AsyncSession) -> None:
         calls.append(document)
 
     monkeypatch.setattr(processing, "_extract_and_index", record)
