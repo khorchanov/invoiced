@@ -3,12 +3,22 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.document import Document
+from app.models.document import Document, DocumentStatus
 
 
 class DocumentRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    async def get(self, document_id: uuid.UUID) -> Document | None:
+        return await self.session.get(Document, document_id)
+
+    async def set_status(
+        self, document: Document, status: DocumentStatus, error: str | None = None
+    ) -> None:
+        document.status = status
+        document.error = error
+        await self.session.commit()
 
     async def create(self, document: Document) -> Document:
         self.session.add(document)

@@ -1,6 +1,11 @@
-from collections.abc import AsyncIterator, Awaitable, Callable
+import uuid
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from pathlib import Path
+from typing import Annotated
 
+import pytest
 import pytest_asyncio
+from fastapi import Depends
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
@@ -9,7 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from app import models  # noqa: F401  (registers tables on Base.metadata)
 from app.core.config import get_settings
 from app.core.database import Base, get_db
+from app.dependencies import get_document_repository, get_document_service
 from app.main import app
+from app.repositories.document import DocumentRepository
+from app.services.document import DocumentService
 
 TEST_DB_NAME = "ainative_test"
 
@@ -51,6 +59,23 @@ async def client(test_engine: AsyncEngine) -> AsyncIterator[AsyncClient]:
     table_names = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
     async with test_engine.begin() as conn:
         await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture
+def enqueued() -> list[uuid.UUID]:
+    return []
+
+
+@pytest.fixture
+def upload_dir(tmp_path: Path, enqueued: list[uuid.UUID]) -> Iterator[Path]:
+    def override(
+        documents: Annotated[DocumentRepository, Depends(get_document_repository)],
+    ) -> DocumentService:
+        return DocumentService(documents, tmp_path, max_bytes=1024, enqueue=enqueued.append)
+
+    app.dependency_overrides[get_document_service] = override
+    yield tmp_path
+    app.dependency_overrides.pop(get_document_service, None)
 
 
 @pytest_asyncio.fixture

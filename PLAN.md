@@ -18,6 +18,9 @@ uv run alembic upgrade head
 # 3. Run the API (http://127.0.0.1:8000, docs at /docs)
 uv run uvicorn app.main:app --reload
 
+# 3b. Run the Celery worker in a second terminal (--pool=solo is required on Windows)
+uv run celery -A app.worker.celery_app worker --loglevel=info --pool=solo
+
 # 4. Test
 uv run pytest -q
 
@@ -84,7 +87,9 @@ docker compose down -v            # stop and wipe data
 - [ ] `app/models/__init__.py` style: keep re-export + `__all__` (A) or just `from app.models import user  # noqa: F401` (B)?
 - [ ] Keep `String(255)` for email/hashed_password, or switch to `Text`? (Regenerate the migration if so, while it is the only one.)
 - [ ] Alias `DbSession = Annotated[AsyncSession, Depends(get_db)]` once there are several routes.
-- [ ] Commit: nothing is committed yet.
+- [ ] Commit: Steps 14-16 are not committed yet.
+- [ ] Enqueue failure: if Redis is down after the document row is committed, the document stays `pending` forever. Fix later with a transactional outbox or a periodic sweeper that re-enqueues old `pending` rows.
+- [ ] Production: `SECRET_KEY` must come from the environment (the default in `config.py` is dev only).
 
 ## Gotchas learned
 
@@ -92,3 +97,5 @@ docker compose down -v            # stop and wipe data
 - Driver errors like `ConnectionRefusedError` are plain `OSError`, not `SQLAlchemyError`: catch both for the DB health check.
 - pytest-asyncio: use a session-scoped loop so pooled DB connections do not outlive their loop.
 - `PYTHONDONTWRITEBYTECODE=1` is set at user level; terminals and editors started before that need a restart.
+- Celery tasks are sync: async DB code runs via `asyncio.run` with a per-task `NullPool` engine (a pooled engine would be tied to a dead event loop).
+- The processing task is idempotent: it only starts from `pending`, so redelivered messages do nothing.

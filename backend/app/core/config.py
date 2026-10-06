@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "ai-native"
     environment: str = "dev"
     database_url: str = "postgresql+asyncpg://ainative:ainative@localhost:5432/ainative"
+    redis_url: str = "redis://localhost:6379/0"
     secret_key: str = "dev-only-secret-change-me-in-production-0123456789"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30

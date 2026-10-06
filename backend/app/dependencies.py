@@ -15,6 +15,7 @@ from app.repositories.document import DocumentRepository
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
 from app.services.document import DocumentService
+from app.worker.tasks import enqueue_processing
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -59,4 +60,6 @@ def get_document_service(
     documents: Annotated[DocumentRepository, Depends(get_document_repository)],
 ) -> DocumentService:
     settings = get_settings()
-    return DocumentService(documents, Path(settings.upload_dir), settings.max_upload_bytes)
+    return DocumentService(
+        documents, Path(settings.upload_dir), settings.max_upload_bytes, enqueue_processing
+    )

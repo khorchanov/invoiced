@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 
 from app.models.document import Document
@@ -25,10 +26,17 @@ class InvalidFileError(Exception):
 
 
 class DocumentService:
-    def __init__(self, documents: DocumentRepository, upload_dir: Path, max_bytes: int) -> None:
+    def __init__(
+        self,
+        documents: DocumentRepository,
+        upload_dir: Path,
+        max_bytes: int,
+        enqueue: Callable[[uuid.UUID], None],
+    ) -> None:
         self.documents = documents
         self.upload_dir = upload_dir
         self.max_bytes = max_bytes
+        self.enqueue = enqueue
 
     async def upload(self, owner_id: uuid.UUID, filename: str | None, data: bytes) -> Document:
         name = PurePosixPath((filename or "").replace("\\", "/")).name
@@ -57,10 +65,12 @@ class DocumentService:
             size_bytes=len(data),
         )
         try:
-            return await self.documents.create(document)
+            document = await self.documents.create(document)
         except Exception:
             path.unlink(missing_ok=True)
             raise
+        await asyncio.to_thread(self.enqueue, document.id)
+        return document
 
     async def list_for_owner(self, owner_id: uuid.UUID) -> list[Document]:
         return await self.documents.list_for_owner(owner_id)

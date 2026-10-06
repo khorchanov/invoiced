@@ -1,32 +1,12 @@
 import uuid
-from collections.abc import Awaitable, Callable, Iterator
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Annotated
 
-import pytest
-from fastapi import Depends
 from httpx import AsyncClient
-
-from app.dependencies import get_document_repository, get_document_service
-from app.main import app
-from app.repositories.document import DocumentRepository
-from app.services.document import DocumentService
 
 AuthHeaders = Callable[[str], Awaitable[dict[str, str]]]
 
 PDF_BYTES = b"%PDF-1.4\n% fake but valid-looking pdf\n"
-
-
-@pytest.fixture
-def upload_dir(tmp_path: Path) -> Iterator[Path]:
-    def override(
-        documents: Annotated[DocumentRepository, Depends(get_document_repository)],
-    ) -> DocumentService:
-        return DocumentService(documents, tmp_path, max_bytes=1024)
-
-    app.dependency_overrides[get_document_service] = override
-    yield tmp_path
-    app.dependency_overrides.pop(get_document_service, None)
 
 
 async def upload(client: AsyncClient, headers: dict[str, str], name: str, data: bytes):
@@ -97,6 +77,26 @@ async def test_upload_path_traversal_filename_is_neutralized(
     stored = list(upload_dir.rglob("*.txt"))
     assert len(stored) == 1
     assert upload_dir in stored[0].parents
+
+
+async def test_upload_enqueues_processing_once(
+    client: AsyncClient, upload_dir: Path, enqueued: list[uuid.UUID], make_auth_headers: AuthHeaders
+) -> None:
+    headers = await make_auth_headers("alice@example.com")
+
+    response = await upload(client, headers, "notes.txt", b"hello")
+
+    assert enqueued == [uuid.UUID(response.json()["id"])]
+
+
+async def test_rejected_upload_is_not_enqueued(
+    client: AsyncClient, upload_dir: Path, enqueued: list[uuid.UUID], make_auth_headers: AuthHeaders
+) -> None:
+    headers = await make_auth_headers("alice@example.com")
+
+    await upload(client, headers, "virus.exe", b"MZ")
+
+    assert enqueued == []
 
 
 async def test_upload_requires_authentication(client: AsyncClient, upload_dir: Path) -> None:
