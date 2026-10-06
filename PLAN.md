@@ -71,7 +71,7 @@ docker compose down -v            # stop and wipe data
 - [ ] Verify end to end against a real Ollama (`ollama pull nomic-embed-text`, then upload a file)
 
 ### Milestone 4: retrieval and agent
-- [ ] pgvector search filtered by user
+- [x] pgvector search filtered by user: `ChunkRepository.search`, `POST /search`, isolation test
 - [ ] LangChain agent (tools: `search_documents`, `list_documents`, `get_document_summary`), non-streaming
 - [ ] LLM/embedding provider switch (Ollama / hosted); embeddings are Ollama-only for now, and the column is fixed at 768 dims
 

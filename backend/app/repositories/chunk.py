@@ -1,9 +1,21 @@
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chunk import Chunk
+from app.models.document import Document
+
+
+@dataclass
+class SearchHit:
+    chunk_id: uuid.UUID
+    document_id: uuid.UUID
+    filename: str
+    position: int
+    content: str
+    score: float
 
 
 class ChunkRepository:
@@ -41,3 +53,27 @@ class ChunkRepository:
             select(Chunk).where(Chunk.document_id == document_id).order_by(Chunk.position)
         )
         return list(result.scalars())
+
+    async def search(
+        self, owner_id: uuid.UUID, query_embedding: list[float], limit: int
+    ) -> list[SearchHit]:
+        """Nearest chunks by cosine similarity. Always scoped to `owner_id`."""
+        distance = Chunk.embedding.cosine_distance(query_embedding)
+        result = await self.session.execute(
+            select(Chunk, Document.filename, distance.label("distance"))
+            .join(Document, Document.id == Chunk.document_id)
+            .where(Chunk.owner_id == owner_id, Chunk.embedding.is_not(None))
+            .order_by(distance)
+            .limit(limit)
+        )
+        return [
+            SearchHit(
+                chunk_id=chunk.id,
+                document_id=chunk.document_id,
+                filename=filename,
+                position=chunk.position,
+                content=chunk.content,
+                score=1 - dist,
+            )
+            for chunk, filename, dist in result.all()
+        ]

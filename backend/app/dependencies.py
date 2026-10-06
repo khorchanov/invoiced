@@ -11,10 +11,13 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
+from app.repositories.chunk import ChunkRepository
 from app.repositories.document import DocumentRepository
 from app.repositories.user import UserRepository
 from app.services.auth import AuthService
 from app.services.document import DocumentService
+from app.services.embedding import Embedder, get_embedder
+from app.services.search import SearchService
 from app.worker.tasks import enqueue_processing
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -63,3 +66,9 @@ def get_document_service(
     return DocumentService(
         documents, Path(settings.upload_dir), settings.max_upload_bytes, enqueue_processing
     )
+
+
+def get_search_service(
+    db: DbSession, embedder: Annotated[Embedder, Depends(get_embedder)]
+) -> SearchService:
+    return SearchService(ChunkRepository(db), embedder)
