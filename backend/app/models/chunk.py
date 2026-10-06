@@ -1,6 +1,7 @@
 import uuid
 
-from sqlalchemy import ForeignKey, Integer, Text, UniqueConstraint, text
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,3 +20,6 @@ class Chunk(Base):
     owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     position: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
+    # Nullable until the chunk has been embedded; the model is recorded because dimensions differ.
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(768))
+    embedding_model: Mapped[str | None] = mapped_column(String(100))

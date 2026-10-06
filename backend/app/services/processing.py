@@ -10,6 +10,7 @@ from app.models.document import Document, DocumentStatus
 from app.repositories.chunk import ChunkRepository
 from app.repositories.document import DocumentRepository
 from app.services.chunking import chunk_text
+from app.services.embedding import get_embedder
 from app.services.extraction import extract_text
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,11 @@ async def _extract_and_index(document: Document, session: AsyncSession) -> None:
     path = Path(get_settings().upload_dir) / document.storage_path
     data = await asyncio.to_thread(path.read_bytes)
     chunks = chunk_text(extract_text(data, document.content_type))
-    await ChunkRepository(session).replace_for_document(document.id, document.owner_id, chunks)
-    # Embedding arrives in the next step.
+    embedder = get_embedder()
+    embeddings = await embedder.embed(chunks)
+    await ChunkRepository(session).replace_for_document(
+        document.id, document.owner_id, chunks, embeddings, embedder.model
+    )
 
 
 async def process_document(

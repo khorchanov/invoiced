@@ -20,6 +20,18 @@ def session_factory(test_engine: AsyncEngine, client: AsyncClient) -> async_sess
     return async_sessionmaker(test_engine, expire_on_commit=False)
 
 
+class FakeEmbedder:
+    model = "fake-model"
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[0.1] * 768 for _ in texts]
+
+
+@pytest.fixture(autouse=True)
+def fake_embedder(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(processing, "get_embedder", FakeEmbedder)
+
+
 @pytest.fixture
 def upload_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
@@ -68,6 +80,8 @@ async def test_processing_stores_chunks_and_marks_ready(
     async with session_factory() as session:
         chunks = await ChunkRepository(session).list_for_document(document_id)
     assert [c.content for c in chunks] == ["hello world"]
+    assert chunks[0].embedding_model == "fake-model"
+    assert len(chunks[0].embedding) == 768
 
 
 async def test_processing_missing_file_marks_document_failed(

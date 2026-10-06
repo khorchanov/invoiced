@@ -67,12 +67,13 @@ docker compose down -v            # stop and wipe data
 - [x] `services/extraction.py` (PDF/text) and `services/chunking.py`, unit tested
 - [x] Migration: `CREATE EXTENSION vector`, `chunks` table (owner_id + document_id, no embedding column yet)
 - [x] `_extract_and_index` extracts, chunks and stores chunks
-- [ ] Embed chunks: add `embedding` + `embedding_model` columns (needs the provider decision: Ollama or hosted)
+- [x] Embed chunks via Ollama (`nomic-embed-text`, 768 dims): `embedding` + `embedding_model` columns, `services/embedding.py` (config: `OLLAMA_BASE_URL`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`)
+- [ ] Verify end to end against a real Ollama (`ollama pull nomic-embed-text`, then upload a file)
 
 ### Milestone 4: retrieval and agent
 - [ ] pgvector search filtered by user
 - [ ] LangChain agent (tools: `search_documents`, `list_documents`, `get_document_summary`), non-streaming
-- [ ] LLM/embedding provider switch (Ollama / hosted)
+- [ ] LLM/embedding provider switch (Ollama / hosted); embeddings are Ollama-only for now, and the column is fixed at 768 dims
 
 ### Milestone 5: streaming and observability
 - [ ] SSE endpoint (tool events + tokens)

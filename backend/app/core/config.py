@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     upload_dir: str = "uploads"
     max_upload_bytes: int = 10 * 1024 * 1024
+    ollama_base_url: str = "http://localhost:11434"
+    embedding_model: str = "nomic-embed-text"
+    embedding_dimensions: int = 768
 
 
 @lru_cache
