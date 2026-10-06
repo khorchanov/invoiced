@@ -54,18 +54,19 @@ docker compose down -v            # stop and wipe data
 
 ## To do
 
-### Milestone 2: auth and users (in progress)
-- [ ] `core/security.py`: password hashing + JWT create/decode, unit tests
-- [ ] Pydantic schemas (`UserCreate`, `UserRead`, `Token`)
-- [ ] `repositories/user.py`, `services/auth.py`
-- [ ] `POST /auth/register`, `POST /auth/login`, `GET /users/me` (`get_current_user` dependency)
-- [ ] Tests: register, duplicate email, login, bad password, protected route
-- [ ] Test DB isolation (separate test database or rollback per test)
+### Milestone 2: auth and users (done)
+- [x] `core/security.py`: password hashing + JWT create/decode, unit tests
+- [x] Pydantic schemas (`UserCreate`, `UserRead`, `Token`)
+- [x] `repositories/user.py`, `services/auth.py`
+- [x] `POST /auth/register`, `POST /auth/login`, `GET /users/me` (`get_current_user` dependency)
+- [x] Tests: register, duplicate email, login, bad password, protected route
+- [x] Test DB isolation (separate test database or rollback per test)
 
-### Milestone 3: documents and Celery
-- [ ] Migration: `CREATE EXTENSION vector`, `documents` and `chunks` tables
-- [ ] Upload endpoint + status (`pending`, `processing`, `ready`, `failed`)
-- [ ] Celery worker: extract -> chunk -> embed -> store
+### Milestone 3: documents and Celery (in progress)
+- [x] `documents` table, upload endpoint + status, Celery app and idempotent `process_document` task
+- [x] `services/extraction.py` (PDF/text) and `services/chunking.py`, unit tested
+- [ ] Migration: `CREATE EXTENSION vector`, `chunks` table (owner_id + document_id, embedding model per chunk)
+- [ ] Wire extract -> chunk -> store into `_extract_and_index` (needs Docker for DB tests), then embed
 
 ### Milestone 4: retrieval and agent
 - [ ] pgvector search filtered by user
